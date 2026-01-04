@@ -10,11 +10,11 @@ OmniDev is an intelligent CLI-based AI coding assistant that brings the power of
 
 **"AI Coding for Everyone, Upgrading Optional"**
 
-1. **Free First**: Start with zero barriers (no API keys needed)
-2. **Upgrade Path**: Seamless migration to premium APIs when users need reliability
+1. **Free Tier Available**: Groq offers 30 requests/minute with free API keys
+2. **Upgrade Path**: Seamless migration to premium APIs when users need more
 3. **Provider Agnostic**: Never lock users into one ecosystem
 4. **Transparency**: Always show which model/provider is being used
-5. **Resilience**: Auto-failover when free providers break
+5. **No Auto-Fallback**: Respects your provider choice, shows clear errors if it fails
 6. **Open Source**: Community-driven, transparent, and extensible
 
 ### What Makes OmniDev Different?
@@ -24,8 +24,9 @@ OmniDev is not just another AI coding tool - it's an intelligent development par
 - Plans complex changes before executing them
 - Executes autonomously with minimal intervention
 - Learns from context to provide increasingly better assistance
-- Works completely free using gpt4free, with optional premium upgrades
+- Free tier available through Groq, with optional premium upgrades
 - Supports multiple AI providers simultaneously
+- Interactive REPL mode with beautiful terminal UI
 
 ---
 
@@ -253,7 +254,7 @@ Current Session:
   Total tokens used: 47,382
   
   By Provider:
-  ├─ Free (GPT4Free): 32,100 tokens ($0.00)
+  ├─ Groq (Free): 32,100 tokens ($0.00)
   ├─ GPT-4o: 8,200 tokens ($0.15)
   └─ Claude Sonnet: 7,082 tokens ($0.21)
   
@@ -436,34 +437,35 @@ Proceed? (yes/no/show-diff):
 
 OmniDev supports multiple AI providers, starting free and allowing seamless upgrades.
 
-#### 5.1 Free Tier (GPT4Free)
-- Automatic working provider detection
-- Daily sync with g4f-working repository
-- Health monitoring of each provider
-- Automatic provider rotation on failure
-- Zero cost, zero API keys needed
+#### 5.1 Free Tier (Groq)
+- **30 requests/minute free** with Groq API
+- Fast inference (claimed fastest in industry)
+- Free API key available at [console.groq.com](https://console.groq.com)
+- Multiple open-source models available
 
-**Supported Free Models**:
-- GPT-4o, GPT-4 Turbo (via gpt4free)
-- Claude Sonnet, Claude Opus (via gpt4free)
-- Gemini Pro (via gpt4free)
-- DeepSeek, o1, o3 (via gpt4free)
-- And many more through gpt4free providers
+**Supported Free Models (via Groq)**:
+- OpenAI GPT-OSS 120B, 20B (open source versions)
+- LLaMA 3.3 70B Versatile
+- LLaMA 3.1 8B Instant
+- LLaMA 4 Maverick 17B
+- Mixtral 8x7B
+- Gemma2 9B
+- And more...
 
 #### 5.2 Premium Tier (Official APIs)
-**Optional upgrades for reliability**:
-- OpenAI API (GPT-4, GPT-4o, o1, o3)
-- Anthropic API (Claude 3.5 Sonnet, Opus)
-- Google Gemini API
-- DeepSeek API
+**Optional upgrades for reliability and higher limits**:
+- OpenAI API (GPT-4o, GPT-4 Turbo)
+- Anthropic API (Claude Sonnet 4, Claude Opus 4)
+- Google Gemini API (Gemini 2.0 Flash, Gemini 2.5 Pro)
+- OpenRouter API (access to many models)
 - Standardized interface across all providers
 
-#### 5.3 Fallback Chain Logic
-**Priority Order**:
-1. User's preferred API (if configured)
-2. Free premium models (via gpt4free)
-3. Basic free models (via gpt4free)
-4. Intelligent degradation (try alternatives if unavailable)
+#### 5.3 Provider Selection Logic
+**No automatic fallback** - OmniDev respects your provider choice:
+1. Uses your configured provider (from `/setup`)
+2. If provider fails, shows clear error message
+3. No silent switching to different providers
+4. Full transparency on which provider/model is used
 
 #### 5.4 Provider Management
 - Easy API key management (encrypted storage)
@@ -810,14 +812,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 OmniDev combines the best features of commercial AI coding assistants with the freedom and flexibility of open source:
 
-✅ **Free First**: Start with zero barriers
+✅ **Free Tier Available**: Groq offers 30 req/min free
 ✅ **Intelligence**: 4 operational modes for every scenario
 ✅ **Context Awareness**: Dynamic, learning context management
-✅ **Model Flexibility**: Automatic routing to best model for each task
+✅ **Model Flexibility**: Route to the best model for each task
 ✅ **Safety**: Comprehensive backup and rollback systems
 ✅ **Open Source**: Community-driven, transparent, extensible
-✅ **Multi-Provider**: Never locked into one ecosystem
+✅ **Multi-Provider**: Support for Groq, OpenAI, Anthropic, Google, OpenRouter
 ✅ **Planning**: See changes before they happen
+✅ **Interactive REPL**: Beautiful terminal UI with loading spinners
 
 **OmniDev is the open-source AI coding assistant that puts you in control.**
 

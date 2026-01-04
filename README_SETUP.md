@@ -67,21 +67,38 @@ pip install uv
 uv pip install -e ".[dev]"
 ```
 
-### 4. Configure OpenRouter API Key (Required for Agents)
+### 4. Configure AI Provider
 
-OmniDev requires an OpenRouter API key for agent operations. Set it up:
+OmniDev supports multiple AI providers. The recommended free option is **Groq**:
 
 ```bash
-# Interactive setup wizard (recommended)
-omnidev setup
+# Start interactive mode and run setup
+omnidev -i
+# Then type: /setup
 
-# Or manually create .env file
-echo "OMNIDEV_OPENROUTER_API_KEY=your-key-here" > .env
+# Or run the setup wizard directly
+omnidev --setup
 ```
 
-Get your API key from: https://openrouter.ai/keys
+**Supported Providers:**
+| Provider | Free Tier | Get API Key |
+|----------|-----------|-------------|
+| **Groq** | ✅ 30 req/min | [console.groq.com](https://console.groq.com) |
+| OpenAI | ❌ | [platform.openai.com](https://platform.openai.com/api-keys) |
+| Anthropic | ❌ | [console.anthropic.com](https://console.anthropic.com) |
+| Google | ❌ | [aistudio.google.com](https://aistudio.google.com/apikey) |
+| OpenRouter | ❌ | [openrouter.ai/keys](https://openrouter.ai/keys) |
 
-**Note:** The OpenRouter API key is used exclusively for agent orchestration (internal decision-making, planning, validation), NOT for code generation.
+**Manual Configuration:**
+```bash
+# Create .env file in project root
+echo "GROQ_API_KEY=your-key-here" > .env
+
+# Or for other providers:
+echo "OPENAI_API_KEY=your-key-here" > .env
+```
+
+**Important:** Add `.env` to your `.gitignore` to keep your API keys secure.
 
 ### 5. Verify Installation
 
@@ -102,6 +119,22 @@ python -c "import omnidev; print('✅ Installation successful')"
 
 ```bash
 conda activate omnidev
+```
+
+### Using OmniDev
+
+```bash
+# Start interactive mode (recommended)
+omnidev -i
+
+# Run a single query
+omnidev "create a Python function to parse JSON"
+
+# Run with specific mode
+omnidev --mode agent "add authentication to the API"
+
+# View available slash commands in interactive mode
+/help
 ```
 
 ### Deactivate Environment

@@ -6,7 +6,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Status: In Development](https://img.shields.io/badge/status-in%20development-orange.svg)]()
 
-OmniDev is an intelligent CLI-based AI coding assistant that brings the power of multiple AI models to your terminal - **for free**. It combines autonomous operation, strategic planning, and smart model selection to help you code faster and better.
+OmniDev is an intelligent CLI-based AI coding assistant that brings the power of multiple AI models to your terminal - **with a free tier**. It combines autonomous operation, strategic planning, and smart model selection to help you code faster and better.
 
 ---
 
@@ -18,9 +18,9 @@ OmniDev is your AI pair programmer that:
 - 🧠 **Plans complex changes** before executing them, showing you the full impact
 - 🎯 **Intelligently selects the best AI model** for each task (coding, debugging, refactoring, testing)
 - 🔄 **Maintains dynamic project context** - automatically includes relevant files without manual selection
-- 💰 **Starts completely free** using gpt4free, with optional premium API upgrades
+- 💰 **Free tier available** using Groq (30 requests/minute), with optional premium API upgrades
 - 🛡️ **Keeps your code safe** with automatic backups and Git integration
-- 🎨 **Modern Rich CLI** with colorful UI, slash commands, and interactive mode
+- 🎨 **Modern Rich CLI** with colorful UI, loading spinners, slash commands, and interactive REPL mode
 - 🤝 **CrewAI Agent System** for intelligent orchestration of all internal operations
 - ⚙️ **Project-specific configuration** with `.env` file support for API keys
 
@@ -95,45 +95,84 @@ Filename: components/UserProfile.tsx
 # Install OmniDev
 pip install omnidev
 
-# First-time setup (configure OpenRouter API key for agents)
-omnidev setup
+# Run interactive setup wizard
+omnidev -i
 ```
 
 **For Developers:**
 See [README_SETUP.md](README_SETUP.md) for detailed setup instructions using Miniconda and UV package manager.
 
-### OpenRouter API Key Setup (Required for Agents)
+### Interactive Mode (Recommended)
 
-OmniDev uses **OpenRouter API keys exclusively for agent operations** (internal orchestration, decision-making, planning, validation). The OpenRouter API is **NOT used** for code generation.
+Start OmniDev in interactive REPL mode for a chat-like experience:
+
+```bash
+omnidev -i
+# or
+omnidev --interactive
+```
+
+This launches an interactive shell with:
+- 💬 Chat-style interface
+- 🔄 Loading spinners while waiting for responses
+- ⚙️ In-REPL setup wizard (`/setup`)
+- 🎨 Beautiful terminal UI with panels and colors
+- 📜 Command history and auto-suggestions
+- 🔧 Slash commands for quick actions
+
+**Available Slash Commands:**
+| Command | Description |
+|---------|-------------|
+| `/help` | Show all available commands |
+| `/setup` | Run full setup wizard |
+| `/provider` | Change AI provider |
+| `/model` | Change AI model |
+| `/mode` | Change operational mode |
+| `/status` | Show current configuration |
+| `/clear` | Clear the screen |
+| `/exit` | Exit the REPL |
+
+### Provider Setup
+
+OmniDev supports multiple AI providers. On first run, you'll be guided through setup:
+
+**Supported Providers:**
+| Provider | Free Tier | API Key Required |
+|----------|-----------|------------------|
+| **Groq** | ✅ Yes (30 req/min) | ✅ Yes (free at [console.groq.com](https://console.groq.com)) |
+| OpenAI | ❌ No | ✅ Yes |
+| Anthropic | ❌ No | ✅ Yes |
+| Google | ❌ No | ✅ Yes |
+| OpenRouter | ✅ Yes | ✅ Yes |
 
 **Quick Setup:**
 ```bash
-omnidev setup
-```
+# Interactive setup (recommended)
+omnidev -i
+# Then type: /setup
 
-This interactive wizard will guide you through:
-1. Entering your OpenRouter API key (get it from [openrouter.ai/keys](https://openrouter.ai/keys))
-2. Choosing storage location (project `.env` file or system keyring)
-3. Verifying the key is saved correctly
+# Or run setup directly
+omnidev --setup
+```
 
 **Manual Setup:**
 Create a `.env` file in your project root:
 ```bash
 # .env
-OMNIDEV_OPENROUTER_API_KEY=your-api-key-here
+GROQ_API_KEY=your-groq-api-key-here
+# or
+OPENAI_API_KEY=your-openai-api-key-here
 ```
 
-**Important:** Add `.env` to your `.gitignore` to keep your API key secure.
-
-For detailed setup instructions, see [SETUP_OPENROUTER.md](SETUP_OPENROUTER.md).
+**Important:** Add `.env` to your `.gitignore` to keep your API keys secure.
 
 ### Basic Usage
 
 ```bash
-# Start in your project directory
-cd my-project
+# Start interactive mode (recommended)
+omnidev -i
 
-# Use natural language to code
+# Run a single query
 omnidev "create a Python FastAPI server with authentication"
 
 # Agent mode (full autonomy)
@@ -165,8 +204,8 @@ omnidev --model gpt-4o "explain how this algorithm works"
 ### Smart Model Routing
 - Analyzes each task and selects the optimal AI model
 - Balances quality, speed, and cost automatically
-- Falls back gracefully when models are unavailable
-- Learns from your feedback to improve selections
+- No automatic fallback - shows clear errors when provider fails
+- Respects your provider/model selection
 
 ### Safety & Reliability
 - Automatic backups before any destructive operation
@@ -204,34 +243,28 @@ Apply fix? (yes/no): yes
 ✓ Tests passing
 ```
 
-### Refactor Code
+### Interactive Session
 ```bash
-$ omnidev --mode planning "convert this Flask app to FastAPI"
+$ omnidev -i
 
-REFACTORING PLAN:
-├─ Update dependencies (requirements.txt)
-├─ Convert route decorators (12 files)
-├─ Update request/response models (8 files)
-├─ Migrate database ORM (4 files)
-└─ Update tests (15 files)
+╭────────────────────────────────────────────╮
+│  Welcome to OmniDev Interactive Mode       │
+│                                            │
+│    ⚡ Provider: groq                       │
+│    🤖 Model:    llama-3.3-70b-versatile    │
+│    📋 Mode:     agent                      │
+│                                            │
+│    Type /help for commands!                │
+╰────────────────────────────────────────────╯
 
-Estimated time: 2-3 hours
-Breaking changes: Yes
+❯ tell me about the current project structure
 
-Proceed? (yes/no):
-```
+💭 Thinking with llama-3.3-70b-versatile via Groq (Free)...
 
-### Generate Tests
-```bash
-$ omnidev "write comprehensive tests for the authentication module"
-
-→ Analyzing auth.py...
-→ Generating test scenarios...
-✓ Created tests/test_auth_happy_path.py (8 tests)
-✓ Created tests/test_auth_errors.py (12 tests)
-✓ Created tests/test_auth_edge_cases.py (7 tests)
-
-Coverage: 94% → Run tests? (yes/no):
+╭────────────────────────────────────────────╮
+│  The project follows a modular structure   │
+│  with clear separation of concerns...      │
+╰────────────────────────────────────────────╯
 ```
 
 ---
@@ -240,34 +273,22 @@ Coverage: 94% → Run tests? (yes/no):
 
 OmniDev works out of the box, but you can customize it:
 
-### OpenRouter API Key (Required for Agents)
-
-The OpenRouter API key is required for agent operations. Set it up using:
-
+### Interactive Setup (Recommended)
 ```bash
-# Interactive setup wizard (recommended)
-omnidev setup
-
-# Or manually via CLI
-omnidev config add-key openrouter YOUR_OPENROUTER_API_KEY
-
-# Or create .env file in project root
-echo "OMNIDEV_OPENROUTER_API_KEY=your-key-here" > .env
+# Start interactive mode and run setup
+omnidev -i
+❯ /setup
 ```
-
-**Note:** OpenRouter is used exclusively for agent orchestration, NOT for code generation.
 
 ### Global Configuration
 ```bash
 # Set your preferred default model
-omnidev config set default-model claude-sonnet-4
+omnidev config set default-model llama-3.3-70b-versatile
 
-# Add your API keys (optional, for premium models)
+# Add your API keys
+omnidev config add-key groq YOUR_API_KEY
 omnidev config add-key openai YOUR_API_KEY
 omnidev config add-key anthropic YOUR_API_KEY
-
-# Set daily budget limit
-omnidev config set budget 5.00
 ```
 
 ### Project Configuration
@@ -275,11 +296,13 @@ Create `.omnidev.yaml` in your project root:
 
 ```yaml
 project_name: "My API Project"
-default_mode: agent
+
+mode:
+  default_mode: agent
 
 models:
-  preferred: claude-sonnet-4
-  fallback: gpt4free
+  preferred: llama-3.3-70b-versatile
+  fallback: groq
 
 context:
   always_include:
@@ -295,7 +318,7 @@ context:
 ## 🌟 Why OmniDev?
 
 ### vs. Claude Code
-- ✅ **Free tier available** (Claude Code requires paid API)
+- ✅ **Free tier available** (Groq offers 30 req/min free)
 - ✅ **Multiple AI models** (not locked to one provider)
 - ✅ **Smart model selection** (uses best model for each task)
 - ✅ **Planning mode** (see changes before they happen)
@@ -318,17 +341,19 @@ context:
 
 **Built with:**
 - Python 3.10+ for core logic
-- [gpt4free](https://github.com/xtekky/gpt4free) for free AI model access
-- Official APIs: OpenAI, Anthropic, Google (optional)
-- Rich CLI for beautiful terminal interface
+- [Groq](https://groq.com) for fast, free AI inference
+- Official APIs: OpenAI, Anthropic, Google, OpenRouter (optional)
+- [Rich](https://github.com/Textualize/rich) for beautiful terminal interface
+- [prompt_toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) for interactive REPL
 - GitPython for version control integration
+- CrewAI for agent orchestration
 
 **Supported AI Models:**
+- LLaMA 3.3 70B, LLaMA 3.1 8B, Mixtral (Groq - Free)
 - GPT-4o, GPT-4 Turbo, GPT-4o-mini (OpenAI)
 - Claude Sonnet 4, Claude Opus 4 (Anthropic)
 - Gemini 2.0 Flash, Gemini 2.5 Pro (Google)
-- DeepSeek, o1, o3 (via gpt4free)
-- And many more through gpt4free providers
+- Many more through OpenRouter
 
 **Supported Languages & Frameworks:**
 - Python (Django, FastAPI, Flask)
@@ -344,13 +369,14 @@ context:
 - Git (for version control features)
 - Internet connection (for AI models)
 
-**Required for Agents:**
-- OpenRouter API key (for agent orchestration) - Configure with `omnidev setup`
+**Required:**
+- API key from at least one provider (Groq is free!)
 
 **Optional (for premium models):**
 - OpenAI API key (for GPT-4, GPT-4o)
 - Anthropic API key (for Claude models)
 - Google API key (for Gemini models)
+- OpenRouter API key (for access to many models)
 
 ---
 
@@ -359,15 +385,17 @@ context:
 ### ✅ Current (v0.1 - MVP)
 - Agent, Planning, Auto-Select, and Manual modes
 - File create, edit, delete operations
-- GPT4Free integration
+- Groq integration (free tier)
+- Interactive REPL mode with loading spinners
 - Basic context management
 - Git integration
+- In-REPL setup wizard
 
 ### 🚧 In Progress (v0.2)
 - Web search integration
 - Documentation fetching
 - Enhanced context scoring
-- Official API integrations (OpenAI, Anthropic)
+- Streaming responses
 
 ### 📅 Coming Soon (v0.3+)
 - MCP server support
@@ -398,8 +426,9 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🙏 Acknowledgments
 
-- [gpt4free](https://github.com/xtekky/gpt4free) for providing free access to AI models
-- [g4f-working](https://github.com/Free-AI-Things/g4f-working) for tracking working providers
+- [Groq](https://groq.com) for providing fast, free AI inference
+- [Rich](https://github.com/Textualize/rich) for the beautiful terminal UI
+- [CrewAI](https://github.com/joaomdmoura/crewAI) for agent orchestration
 - The open-source community for inspiration and support
 
 ---
@@ -416,6 +445,9 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## ⚡ Quick Examples
 
 ```bash
+# Start interactive mode (recommended)
+omnidev -i
+
 # Create a complete web application
 omnidev "build a todo app with React frontend and FastAPI backend"
 

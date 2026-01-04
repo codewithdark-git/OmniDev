@@ -50,19 +50,29 @@ This guide provides instructions for setting up, developing, and contributing to
    pip install -e .
    ```
 
-5. **Configure OpenRouter API key** (required for agents):
+5. **Configure AI provider**:
    ```bash
-   omnidev setup
+   # Start interactive mode and run setup wizard
+   omnidev -i
+   # Then type: /setup
+   
+   # Or run setup directly
+   omnidev --setup
    ```
-   Or create a `.env` file:
+   
+   Or create a `.env` file manually:
    ```bash
-   echo "OMNIDEV_OPENROUTER_API_KEY=your-key-here" > .env
+   # For Groq (free tier)
+   echo "GROQ_API_KEY=your-key-here" > .env
+   
+   # For other providers
+   echo "OPENAI_API_KEY=your-key-here" > .env
    ```
 
 6. **Verify installation**:
    ```bash
    omnidev --version
-   omnidev config list-keys  # Verify OpenRouter key is configured
+   omnidev -i  # Start interactive mode to test
    ```
 
 ### Development Dependencies

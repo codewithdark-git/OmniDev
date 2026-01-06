@@ -1,0 +1,295 @@
+# Security Best Practices
+
+As a 10+ year experienced security engineer, follow these security practices when writing code for OmniDev.
+
+## Input Validation
+
+### Always Validate Inputs
+```python
+def process_user_input(user_input: str, max_length: int = 1000) -> str:
+    """Process user input with validation.
+    
+    Args:
+        user_input: Input from user.
+        max_length: Maximum allowed length.
+        
+    Returns:
+        Validated and sanitized input.
+        
+    Raises:
+        ValidationError: If input is invalid.
+    """
+    # Type validation
+    if not isinstance(user_input, str):
+        raise ValidationError(f"Input must be string, got {type(user_input)}")
+    
+    # Empty check
+    if not user_input or not user_input.strip():
+        raise ValidationError("Input cannot be empty")
+    
+    # Length validation
+    if len(user_input) > max_length:
+        raise ValidationError(f"Input exceeds maximum length of {max_length}")
+    
+    # Content validation (remove dangerous characters)
+    sanitized = user_input.strip()
+    
+    return sanitized
+```
+
+## Path Security
+
+### Prevent Directory Traversal
+```python
+from pathlib import Path
+
+def safe_path_operation(file_path: Path, project_root: Path) -> Path:
+    """Perform safe path operation.
+    
+    Args:
+        file_path: User-provided file path.
+        project_root: Project root directory.
+        
+    Returns:
+        Resolved and validated path.
+        
+    Raises:
+        SecurityError: If path is unsafe.
+    """
+    # Resolve to absolute path
+    resolved = file_path.resolve()
+    root_resolved = project_root.resolve()
+    
+    # Check for directory traversal
+    if ".." in str(resolved) or ".." in str(file_path):
+        raise SecurityError("Directory traversal detected")
+    
+    # Check path is within project root
+    try:
+        resolved.relative_to(root_resolved)
+    except ValueError:
+        raise SecurityError(f"Path outside project root: {file_path}")
+    
+    # Check for symlink attacks (optional but recommended)
+    if resolved.is_symlink():
+        # Resolve symlink and validate again
+        real_path = resolved.resolve()
+        try:
+            real_path.relative_to(root_resolved)
+        except ValueError:
+            raise SecurityError("Symlink points outside project root")
+    
+    return resolved
+```
+
+## Secret Management
+
+### Never Hardcode Secrets
+```python
+# BAD - Never do this
+API_KEY = "sk-1234567890abcdef"
+
+# GOOD - Use environment variables
+import os
+api_key = os.getenv("OPENROUTER_API_KEY")
+if not api_key:
+    raise ConfigurationError("OPENROUTER_API_KEY not set")
+
+# BETTER - Use keyring
+import keyring
+api_key = keyring.get_password("omnidev", "openrouter")
+if not api_key:
+    raise ConfigurationError("OpenRouter API key not configured")
+```
+
+### Never Log Secrets
+```python
+# BAD
+logger.info(f"API key: {api_key}")
+
+# GOOD
+logger.info("API key configured")
+
+# GOOD - Mask secrets in error messages
+def mask_secret(secret: str) -> str:
+    """Mask secret for logging."""
+    if not secret or len(secret) < 8:
+        return "***"
+    return f"{secret[:4]}...{secret[-4:]}"
+
+logger.error(f"API call failed with key: {mask_secret(api_key)}")
+```
+
+## Injection Prevention
+
+### Command Injection
+```python
+# BAD - Never use shell=True with user input
+import subprocess
+subprocess.run(f"git clone {user_url}", shell=True)  # DANGEROUS!
+
+# GOOD - Use proper APIs
+from git import Repo
+Repo.clone_from(user_url, destination)
+
+# If you must use subprocess
+subprocess.run(["git", "clone", user_url], check=True)
+```
+
+### SQL Injection (if using SQL)
+```python
+# BAD
+query = f"SELECT * FROM users WHERE name = '{user_input}'"
+
+# GOOD - Use parameterized queries
+query = "SELECT * FROM users WHERE name = ?"
+cursor.execute(query, (user_input,))
+```
+
+## File Operations Security
+
+### Safe File Reading
+```python
+def safe_read_file(file_path: Path, max_size: int = 10 * 1024 * 1024) -> str:
+    """Safely read file with size limits.
+    
+    Args:
+        file_path: Path to file.
+        max_size: Maximum file size in bytes (default 10MB).
+        
+    Returns:
+        File contents.
+        
+    Raises:
+        SecurityError: If file is too large or unsafe.
+    """
+    # Check file size before reading
+    if file_path.stat().st_size > max_size:
+        raise SecurityError(f"File too large: {file_path.stat().st_size} bytes")
+    
+    # Read with encoding validation
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except UnicodeDecodeError:
+        raise SecurityError(f"Invalid file encoding: {file_path}")
+```
+
+### Safe File Writing
+```python
+def safe_write_file(file_path: Path, content: str, project_root: Path) -> None:
+    """Safely write file with validation.
+    
+    Args:
+        file_path: Path to write to.
+        content: Content to write.
+        project_root: Project root for validation.
+        
+    Raises:
+        SecurityError: If path is unsafe.
+    """
+    # Validate path
+    validated_path = safe_path_operation(file_path, project_root)
+    
+    # Check content size
+    if len(content.encode('utf-8')) > 10 * 1024 * 1024:  # 10MB
+        raise SecurityError("Content too large")
+    
+    # Atomic write
+    temp_path = validated_path.with_suffix(validated_path.suffix + '.tmp')
+    try:
+        temp_path.write_text(content, encoding='utf-8')
+        temp_path.replace(validated_path)
+    except Exception as e:
+        if temp_path.exists():
+            temp_path.unlink()
+        raise
+```
+
+## Authentication and Authorization
+
+### API Key Validation
+```python
+def validate_api_key(api_key: str) -> bool:
+    """Validate API key format and structure.
+    
+    Args:
+        api_key: API key to validate.
+        
+    Returns:
+        True if key format is valid.
+    """
+    if not api_key or not isinstance(api_key, str):
+        return False
+    
+    # Basic format validation (adjust for your provider)
+    if len(api_key) < 20:  # Most API keys are longer
+        return False
+    
+    # Check for common patterns (adjust based on provider)
+    # Example: OpenAI keys start with "sk-"
+    # Don't validate exact format, just basic sanity checks
+    
+    return True
+```
+
+## Data Sanitization
+
+### Sanitize File Names
+```python
+import re
+from pathlib import Path
+
+def sanitize_filename(filename: str) -> str:
+    """Sanitize filename to prevent path injection.
+    
+    Args:
+        filename: Original filename.
+        
+    Returns:
+        Sanitized filename safe for use.
+    """
+    # Remove path components
+    filename = Path(filename).name
+    
+    # Remove dangerous characters
+    filename = re.sub(r'[<>:"|?*\x00-\x1f]', '', filename)
+    
+    # Limit length
+    if len(filename) > 255:
+        name, ext = filename.rsplit('.', 1) if '.' in filename else (filename, '')
+        filename = name[:250] + ('.' + ext if ext else '')
+    
+    # Ensure not empty
+    if not filename or filename in ('.', '..'):
+        filename = "unnamed"
+    
+    return filename
+```
+
+## Security Checklist
+
+Before deploying code, verify:
+- [ ] All inputs are validated
+- [ ] File paths are validated
+- [ ] No secrets in code or logs
+- [ ] No command injection risks
+- [ ] No SQL injection risks (if applicable)
+- [ ] File size limits enforced
+- [ ] Error messages don't leak information
+- [ ] Authentication is required where needed
+- [ ] Authorization checks are in place
+- [ ] Dependencies are up to date
+
+## Common Vulnerabilities to Avoid
+
+1. **Path Traversal**: Always validate paths
+2. **Command Injection**: Never use shell=True with user input
+3. **Information Disclosure**: Don't expose stack traces to users
+4. **Insecure Deserialization**: Validate serialized data
+5. **Missing Authentication**: Protect sensitive operations
+6. **Weak Cryptography**: Use strong, standard algorithms
+7. **Insecure Dependencies**: Keep dependencies updated
+
+Remember: Security is not optional. Every line of code is a potential attack vector. Validate everything, trust nothing.
+

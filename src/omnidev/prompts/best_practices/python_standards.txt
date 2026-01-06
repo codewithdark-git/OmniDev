@@ -1,0 +1,251 @@
+# Python Coding Standards and Best Practices
+
+As a 10+ year experienced Python engineer, follow these standards when writing code for OmniDev.
+
+## PEP 8 Compliance
+
+### Code Layout
+- Use 4 spaces for indentation (never tabs)
+- Maximum line length: 100 characters
+- Blank lines: 2 between top-level definitions, 1 between methods
+- Imports: Standard library, third-party, local (separated by blank line)
+
+### Naming Conventions
+- **Functions and variables**: `snake_case`
+- **Classes**: `PascalCase`
+- **Constants**: `UPPER_SNAKE_CASE`
+- **Private**: Prefix with `_` (single) or `__` (name mangling)
+- **Avoid**: Single letter names except for loop counters
+
+### Type Hints (MANDATORY)
+```python
+from typing import Optional, Union, Any
+from pathlib import Path
+
+# Function parameters and returns
+def process_file(
+    file_path: Path,
+    encoding: str = "utf-8",
+    max_size: Optional[int] = None
+) -> dict[str, Any]:
+    """Process file with type hints."""
+    pass
+
+# Class attributes
+class Config:
+    api_key: Optional[str] = None
+    timeout: int = 30
+    retries: list[int] = []
+```
+
+## Code Organization
+
+### Module Structure
+```python
+"""
+Module docstring describing purpose.
+"""
+
+# Standard library imports
+import os
+from pathlib import Path
+from typing import Optional
+
+# Third-party imports
+import click
+from rich.console import Console
+
+# Local imports
+from omnidev.core.exceptions import OmniDevError
+
+# Constants
+DEFAULT_TIMEOUT = 30
+MAX_RETRIES = 3
+
+# Classes
+class MyClass:
+    """Class docstring."""
+    pass
+
+# Functions
+def public_function() -> None:
+    """Public function docstring."""
+    pass
+
+def _private_function() -> None:
+    """Private function docstring."""
+    pass
+```
+
+### Class Design
+- Single Responsibility Principle
+- Keep classes focused
+- Use composition over inheritance
+- Prefer dataclasses for data structures
+- Use properties for computed attributes
+
+## Modern Python Features
+
+### Use f-strings
+```python
+# Good
+message = f"Processing {file_count} files in {directory}"
+
+# Bad
+message = "Processing {} files in {}".format(file_count, directory)
+```
+
+### Use pathlib
+```python
+# Good
+from pathlib import Path
+file_path = Path("/project") / "src" / "main.py"
+
+# Bad
+import os
+file_path = os.path.join("/project", "src", "main.py")
+```
+
+### Use dataclasses
+```python
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class Config:
+    api_key: Optional[str] = None
+    timeout: int = 30
+    max_retries: int = 3
+```
+
+### Use context managers
+```python
+# Good
+with open(file_path, 'r') as f:
+    content = f.read()
+
+# Good for async
+async with aiofiles.open(file_path, 'r') as f:
+    content = await f.read()
+```
+
+## Error Handling
+
+### Exception Hierarchy
+```python
+# Base exception
+class OmniDevError(Exception):
+    """Base exception for OmniDev."""
+    pass
+
+# Specific exceptions
+class ValidationError(OmniDevError):
+    """Raised when validation fails."""
+    pass
+
+class FileOperationError(OmniDevError):
+    """Raised when file operations fail."""
+    pass
+```
+
+### Exception Handling Pattern
+```python
+def operation(input_data: str) -> Result:
+    """Operation with proper error handling."""
+    if not input_data:
+        raise ValidationError("input_data cannot be empty")
+    
+    try:
+        result = perform_operation(input_data)
+        return Result(success=True, data=result)
+    except SpecificError as e:
+        logger.error(f"Operation failed: {e}")
+        raise OperationError(f"Failed: {e}") from e
+```
+
+## Documentation Standards
+
+### Docstring Format (Google Style)
+```python
+def function_name(param1: str, param2: int = 10) -> bool:
+    """Brief description of function.
+    
+    Longer description if needed, explaining what the function does,
+    any important details, and context.
+    
+    Args:
+        param1: Description of param1. Must be non-empty.
+        param2: Description of param2. Defaults to 10. Must be positive.
+    
+    Returns:
+        True if operation succeeded, False otherwise.
+    
+    Raises:
+        ValidationError: If param1 is empty or param2 is negative.
+        OperationError: If operation fails.
+    
+    Example:
+        >>> result = function_name("test", 5)
+        >>> print(result)
+        True
+    """
+    pass
+```
+
+## Code Quality
+
+### Function Design
+- Keep functions small (< 50 lines)
+- Single responsibility
+- Clear purpose
+- Good naming
+- Proper documentation
+
+### Avoid Anti-patterns
+- **God objects**: Classes doing too much
+- **Long parameter lists**: Use dataclasses or config objects
+- **Deep nesting**: Extract functions, use early returns
+- **Magic numbers**: Use named constants
+- **Code duplication**: Extract common functionality
+
+### Performance Considerations
+- Use generators for large datasets
+- Cache expensive computations
+- Avoid premature optimization
+- Profile before optimizing
+- Use appropriate data structures
+
+## Testing Standards
+
+### Test Organization
+- One test file per module
+- Test class per class being tested
+- Descriptive test names
+- Use fixtures for setup
+- Mock external dependencies
+
+### Test Quality
+- Test happy paths
+- Test error cases
+- Test edge cases
+- Test boundary conditions
+- Keep tests independent
+
+## Security Best Practices
+
+### Input Validation
+- Validate all inputs
+- Sanitize file paths
+- Check data types
+- Enforce size limits
+- Validate ranges
+
+### Secret Management
+- Never hardcode secrets
+- Use environment variables
+- Use keyring for storage
+- Never log secrets
+- Rotate secrets regularly
+
+Remember: Write code as if the person maintaining it is a violent psychopath who knows where you live. Make it clear, correct, and maintainable.
+

@@ -1,0 +1,328 @@
+# Software Architecture Best Practices
+
+As a 10+ year experienced software architect, follow these architectural principles when designing and implementing code for OmniDev.
+
+## SOLID Principles
+
+### Single Responsibility Principle (SRP)
+Each class/function should have one reason to change.
+
+```python
+# BAD - Multiple responsibilities
+class FileManager:
+    def read_file(self, path: Path) -> str:
+        # Reads file
+        pass
+    
+    def validate_path(self, path: Path) -> bool:
+        # Validates path
+        pass
+    
+    def send_email(self, message: str) -> None:
+        # Sends email - wrong responsibility!
+        pass
+
+# GOOD - Single responsibility
+class FileReader:
+    def read_file(self, path: Path) -> str:
+        pass
+
+class PathValidator:
+    def validate_path(self, path: Path) -> bool:
+        pass
+
+class EmailSender:
+    def send_email(self, message: str) -> None:
+        pass
+```
+
+### Open/Closed Principle (OCP)
+Open for extension, closed for modification.
+
+```python
+# Use abstraction for extensibility
+from abc import ABC, abstractmethod
+
+class Provider(ABC):
+    @abstractmethod
+    async def generate(self, prompt: str) -> str:
+        pass
+
+class GPT4Provider(Provider):
+    async def generate(self, prompt: str) -> str:
+        # Implementation
+        pass
+
+class ClaudeProvider(Provider):
+    async def generate(self, prompt: str) -> str:
+        # Different implementation
+        pass
+
+# Can add new providers without modifying existing code
+```
+
+### Liskov Substitution Principle (LSP)
+Subtypes must be substitutable for their base types.
+
+```python
+# Subclasses should not break base class contracts
+class BaseProvider:
+    def generate(self, prompt: str) -> str:
+        """Generate response. Never returns None."""
+        return "response"
+
+class GoodProvider(BaseProvider):
+    def generate(self, prompt: str) -> str:
+        # Always returns string, never None
+        return "good response"
+
+class BadProvider(BaseProvider):
+    def generate(self, prompt: str) -> str:
+        # BAD - Returns None, breaks contract
+        return None  # Violates LSP
+```
+
+### Interface Segregation Principle (ISP)
+Clients shouldn't depend on interfaces they don't use.
+
+```python
+# BAD - Large interface
+class FileOperations:
+    def read(self): pass
+    def write(self): pass
+    def delete(self): pass
+    def send_email(self): pass  # Not all clients need this
+
+# GOOD - Segregated interfaces
+class FileReader:
+    def read(self): pass
+
+class FileWriter:
+    def write(self): pass
+
+class FileDeleter:
+    def delete(self): pass
+```
+
+### Dependency Inversion Principle (DIP)
+Depend on abstractions, not concretions.
+
+```python
+# BAD - Depends on concrete class
+class TaskProcessor:
+    def __init__(self):
+        self.provider = GPT4Provider()  # Hard dependency
+
+# GOOD - Depends on abstraction
+class TaskProcessor:
+    def __init__(self, provider: Provider):
+        self.provider = provider  # Depends on interface
+
+# Usage
+processor = TaskProcessor(GPT4Provider())
+processor = TaskProcessor(ClaudeProvider())  # Easy to swap
+```
+
+## Design Patterns
+
+### Factory Pattern
+```python
+class ProviderFactory:
+    @staticmethod
+    def create(provider_type: str, config: dict) -> Provider:
+        """Create provider instance based on type."""
+        providers = {
+            "gpt4": GPT4Provider,
+            "claude": ClaudeProvider,
+            "deepseek": DeepSeekProvider,
+        }
+        
+        provider_class = providers.get(provider_type)
+        if not provider_class:
+            raise ValueError(f"Unknown provider: {provider_type}")
+        
+        return provider_class(**config)
+```
+
+### Strategy Pattern
+```python
+class ModelSelectionStrategy(ABC):
+    @abstractmethod
+    def select_model(self, task: Task) -> str:
+        pass
+
+class CostOptimizedStrategy(ModelSelectionStrategy):
+    def select_model(self, task: Task) -> str:
+        return "gpt-4o-mini"  # Cheapest option
+
+class QualityOptimizedStrategy(ModelSelectionStrategy):
+    def select_model(self, task: Task) -> str:
+        return "gpt-4o"  # Best quality
+
+class ModelRouter:
+    def __init__(self, strategy: ModelSelectionStrategy):
+        self.strategy = strategy
+    
+    def route(self, task: Task) -> str:
+        return self.strategy.select_model(task)
+```
+
+### Observer Pattern
+```python
+from typing import Protocol
+
+class EventListener(Protocol):
+    def on_event(self, event: dict) -> None:
+        """Handle event."""
+        pass
+
+class EventEmitter:
+    def __init__(self):
+        self.listeners: list[EventListener] = []
+    
+    def subscribe(self, listener: EventListener) -> None:
+        self.listeners.append(listener)
+    
+    def emit(self, event: dict) -> None:
+        for listener in self.listeners:
+            listener.on_event(event)
+```
+
+## Layered Architecture
+
+### Separation of Concerns
+```
+┌─────────────────┐
+│   CLI Layer     │  User interaction
+├─────────────────┤
+│   Core Layer    │  Business logic
+├─────────────────┤
+│   Models Layer  │  AI providers
+├─────────────────┤
+│   Actions Layer │  File operations
+└─────────────────┘
+```
+
+### Layer Responsibilities
+- **CLI Layer**: User interface, command parsing
+- **Core Layer**: Business logic, orchestration
+- **Models Layer**: AI provider abstraction
+- **Actions Layer**: File operations, Git, validation
+- **Utils Layer**: Shared utilities
+
+## Dependency Management
+
+### Dependency Injection
+```python
+class Service:
+    def __init__(
+        self,
+        config: ConfigManager,
+        logger: Logger,
+        provider: Provider
+    ):
+        self.config = config
+        self.logger = logger
+        self.provider = provider
+
+# Easy to test with mocks
+def test_service():
+    mock_config = Mock(ConfigManager)
+    mock_logger = Mock(Logger)
+    mock_provider = Mock(Provider)
+    
+    service = Service(mock_config, mock_logger, mock_provider)
+    # Test service
+```
+
+### Avoid Circular Dependencies
+```python
+# BAD - Circular dependency
+# module_a.py
+from module_b import ClassB
+
+# module_b.py
+from module_a import ClassA
+
+# GOOD - Use dependency injection or events
+# module_a.py
+class ClassA:
+    def __init__(self, b: Optional[ClassB] = None):
+        self.b = b
+
+# module_b.py
+class ClassB:
+    def __init__(self, a: Optional[ClassA] = None):
+        self.a = a
+```
+
+## Module Organization
+
+### Package Structure
+```
+omnidev/
+├── cli/          # CLI interface
+├── core/         # Core business logic
+├── models/       # AI model providers
+├── actions/      # File operations
+├── context/      # Context management
+├── modes/        # Operational modes
+├── agents/       # CrewAI agents
+├── prompts/      # System prompts
+└── utils/        # Utilities
+```
+
+### Module Cohesion
+- Related functionality grouped together
+- Clear module boundaries
+- Minimal coupling between modules
+- High cohesion within modules
+
+## Error Handling Architecture
+
+### Centralized Error Handling
+```python
+# Define exceptions in core/exceptions.py
+class OmniDevError(Exception):
+    """Base exception."""
+    pass
+
+# Use throughout codebase
+raise OmniDevError("Error message")
+
+# Handle at appropriate level
+try:
+    operation()
+except OmniDevError as e:
+    handle_error(e)
+```
+
+## Configuration Management
+
+### Centralized Configuration
+```python
+# Single source of truth
+class ConfigManager:
+    def __init__(self, project_root: Path):
+        self.project_root = project_root
+        self._config = self._load_config()
+    
+    def get(self, key: str) -> Any:
+        return self._config.get(key)
+```
+
+## Architecture Checklist
+
+- [ ] SOLID principles followed
+- [ ] Appropriate design patterns used
+- [ ] Clear layer separation
+- [ ] Dependencies are injected
+- [ ] No circular dependencies
+- [ ] Modules are cohesive
+- [ ] Error handling is centralized
+- [ ] Configuration is centralized
+- [ ] Code is testable
+- [ ] Architecture is extensible
+
+Remember: Good architecture makes code maintainable, testable, and extensible. Design for change.
+

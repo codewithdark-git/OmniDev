@@ -1,0 +1,52 @@
+# Task Execution Template
+
+## Task: {task_description}
+
+## Context
+- Project Root: {project_root}
+- Current Mode: {mode}
+- Selected Model: {model}
+- Files in Context: {file_count}
+
+## Execution Plan
+
+### Phase 1: Analysis
+- [ ] Understand task requirements
+- [ ] Identify relevant files
+- [ ] Assess complexity
+- [ ] Determine approach
+
+### Phase 2: Preparation
+- [ ] Validate inputs
+- [ ] Check prerequisites
+- [ ] Create backups if needed
+- [ ] Prepare environment
+
+### Phase 3: Implementation
+- [ ] Execute planned steps
+- [ ] Validate each step
+- [ ] Handle errors appropriately
+- [ ] Log progress
+
+### Phase 4: Validation
+- [ ] Verify functionality
+- [ ] Run tests
+- [ ] Check code quality
+- [ ] Validate security
+
+### Phase 5: Completion
+- [ ] Update documentation
+- [ ] Clean up temporary files
+- [ ] Provide summary
+- [ ] Suggest next steps
+
+## Notes
+{notes}
+
+## Error Handling
+If errors occur:
+1. Log error with context
+2. Attempt recovery if possible
+3. Provide clear error message
+4. Suggest solutions
+

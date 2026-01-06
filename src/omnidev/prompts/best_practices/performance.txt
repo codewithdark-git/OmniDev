@@ -1,0 +1,278 @@
+# Performance Best Practices
+
+As a 10+ year experienced performance engineer, follow these practices to ensure OmniDev performs efficiently and scales well.
+
+## Performance Principles
+
+1. **Measure First**: Profile before optimizing
+2. **Optimize Hot Paths**: Focus on frequently executed code
+3. **Cache Wisely**: Cache expensive operations
+4. **Lazy Loading**: Load data only when needed
+5. **Resource Management**: Properly manage memory and connections
+
+## Profiling and Measurement
+
+### Identify Bottlenecks
+```python
+import cProfile
+import pstats
+from io import StringIO
+
+def profile_function(func):
+    """Profile a function's performance."""
+    profiler = cProfile.Profile()
+    profiler.enable()
+    result = func()
+    profiler.disable()
+    
+    s = StringIO()
+    stats = pstats.Stats(profiler, stream=s)
+    stats.sort_stats('cumulative')
+    stats.print_stats(20)  # Top 20 functions
+    print(s.getvalue())
+    
+    return result
+```
+
+### Time Operations
+```python
+import time
+from contextlib import contextmanager
+
+@contextmanager
+def timer(operation_name: str):
+    """Context manager for timing operations."""
+    start = time.perf_counter()
+    try:
+        yield
+    finally:
+        elapsed = time.perf_counter() - start
+        logger.debug(f"{operation_name} took {elapsed:.3f}s")
+```
+
+## Efficient Data Structures
+
+### Use Appropriate Collections
+```python
+# For membership testing: use set
+valid_keys = {"key1", "key2", "key3"}
+if user_key in valid_keys:  # O(1) lookup
+    process_key(user_key)
+
+# For ordered data: use list
+items = [1, 2, 3, 4, 5]
+
+# For key-value: use dict
+config = {"key": "value"}
+
+# For counting: use Counter
+from collections import Counter
+counts = Counter(items)
+```
+
+### Generators for Large Data
+```python
+# BAD - Loads everything into memory
+def read_all_lines(file_path: Path) -> list[str]:
+    with open(file_path) as f:
+        return f.readlines()  # Loads entire file
+
+# GOOD - Uses generator
+def read_lines(file_path: Path):
+    """Generator that yields lines one at a time."""
+    with open(file_path) as f:
+        for line in f:
+            yield line.strip()
+
+# Usage
+for line in read_lines(large_file):
+    process(line)  # Processes one line at a time
+```
+
+## Caching Strategies
+
+### Function Caching
+```python
+from functools import lru_cache
+from typing import Callable
+
+@lru_cache(maxsize=128)
+def expensive_operation(input_data: str) -> str:
+    """Expensive operation with caching."""
+    # Expensive computation
+    return processed_result
+
+# For async functions
+from functools import wraps
+
+def async_cache(maxsize: int = 128):
+    """Cache decorator for async functions."""
+    cache = {}
+    
+    def decorator(func: Callable):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            key = str(args) + str(kwargs)
+            if key in cache:
+                return cache[key]
+            result = await func(*args, **kwargs)
+            if len(cache) >= maxsize:
+                cache.pop(next(iter(cache)))  # Remove oldest
+            cache[key] = result
+            return result
+        return wrapper
+    return decorator
+```
+
+### Memoization
+```python
+from functools import lru_cache
+
+@lru_cache(maxsize=256)
+def compute_hash(data: str) -> str:
+    """Compute hash with caching."""
+    import hashlib
+    return hashlib.sha256(data.encode()).hexdigest()
+```
+
+## I/O Optimization
+
+### Batch Operations
+```python
+# BAD - One operation per item
+for item in items:
+    write_to_database(item)
+
+# GOOD - Batch operations
+def write_batch(items: list[dict]) -> None:
+    """Write items in batch."""
+    batch_size = 100
+    for i in range(0, len(items), batch_size):
+        batch = items[i:i + batch_size]
+        database.bulk_insert(batch)
+```
+
+### Async I/O
+```python
+import asyncio
+import aiofiles
+
+async def read_files_async(file_paths: list[Path]) -> list[str]:
+    """Read multiple files concurrently."""
+    async def read_file(path: Path) -> str:
+        async with aiofiles.open(path, 'r') as f:
+            return await f.read()
+    
+    tasks = [read_file(path) for path in file_paths]
+    return await asyncio.gather(*tasks)
+```
+
+## Memory Management
+
+### Avoid Memory Leaks
+```python
+# Use context managers for resources
+with open(file_path) as f:
+    content = f.read()
+# File automatically closed
+
+# For async
+async with aiofiles.open(file_path) as f:
+    content = await f.read()
+
+# Close connections
+async with httpx.AsyncClient() as client:
+    response = await client.get(url)
+# Client automatically closed
+```
+
+### Large Data Processing
+```python
+# Process in chunks
+def process_large_file(file_path: Path, chunk_size: int = 1024 * 1024) -> None:
+    """Process large file in chunks."""
+    with open(file_path, 'rb') as f:
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                break
+            process_chunk(chunk)
+```
+
+## Algorithm Optimization
+
+### Choose Efficient Algorithms
+```python
+# BAD - O(n²) complexity
+def find_duplicates(items: list[str]) -> list[str]:
+    duplicates = []
+    for i, item in enumerate(items):
+        if item in items[i+1:]:  # O(n) operation
+            duplicates.append(item)
+    return duplicates
+
+# GOOD - O(n) complexity
+def find_duplicates(items: list[str]) -> list[str]:
+    seen = set()
+    duplicates = []
+    for item in items:
+        if item in seen:  # O(1) operation
+            duplicates.append(item)
+        seen.add(item)
+    return duplicates
+```
+
+## Database/API Optimization
+
+### Connection Pooling
+```python
+# Reuse connections instead of creating new ones
+class ConnectionPool:
+    def __init__(self, max_connections: int = 10):
+        self.pool = asyncio.Queue(maxsize=max_connections)
+        for _ in range(max_connections):
+            self.pool.put_nowait(create_connection())
+    
+    async def get_connection(self):
+        return await self.pool.get()
+    
+    async def return_connection(self, conn):
+        await self.pool.put(conn)
+```
+
+### Query Optimization
+```python
+# BAD - N+1 queries
+for user in users:
+    posts = get_posts_for_user(user.id)  # One query per user
+
+# GOOD - Single query with join
+posts = get_all_posts_for_users(user_ids)  # One query for all
+```
+
+## Performance Checklist
+
+- [ ] Profiled code to identify bottlenecks
+- [ ] Used appropriate data structures
+- [ ] Implemented caching where beneficial
+- [ ] Used generators for large datasets
+- [ ] Optimized I/O operations
+- [ ] Used async for I/O-bound operations
+- [ ] Managed memory properly
+- [ ] Chose efficient algorithms
+- [ ] Batch operations where possible
+- [ ] Connection pooling for external services
+
+## Common Performance Pitfalls
+
+1. **Premature Optimization**: Optimize only after profiling
+2. **Loading Everything**: Use generators and lazy loading
+3. **Inefficient Queries**: Batch and optimize database queries
+4. **Memory Leaks**: Properly manage resources
+5. **Blocking I/O**: Use async for I/O operations
+6. **Inefficient Algorithms**: Choose right algorithm for the task
+7. **No Caching**: Cache expensive operations
+8. **Synchronous Operations**: Use async when possible
+
+Remember: Premature optimization is the root of all evil. Measure first, then optimize the hot paths.
+

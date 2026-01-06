@@ -1,0 +1,341 @@
+# Error Recovery Best Practices
+
+As a 10+ year experienced engineer, follow these error recovery strategies to build resilient systems in OmniDev.
+
+## Error Recovery Philosophy
+
+1. **Fail Gracefully**: Never crash unexpectedly
+2. **Provide Fallbacks**: Always have backup options
+3. **Retry Intelligently**: Use exponential backoff
+4. **Log Everything**: Record errors for analysis
+5. **Inform Users**: Provide clear, actionable feedback
+
+## Retry Strategies
+
+### Exponential Backoff
+```python
+import asyncio
+from typing import Callable, TypeVar
+
+T = TypeVar('T')
+
+async def retry_with_backoff(
+    operation: Callable[[], T],
+    max_retries: int = 3,
+    initial_delay: float = 1.0,
+    max_delay: float = 60.0,
+    backoff_factor: float = 2.0
+) -> T:
+    """Retry operation with exponential backoff.
+    
+    Args:
+        operation: Async operation to retry.
+        max_retries: Maximum number of retry attempts.
+        initial_delay: Initial delay in seconds.
+        max_delay: Maximum delay in seconds.
+        backoff_factor: Multiplier for delay.
+        
+    Returns:
+        Result of operation.
+        
+    Raises:
+        Last exception if all retries fail.
+    """
+    last_exception = None
+    delay = initial_delay
+    
+    for attempt in range(max_retries):
+        try:
+            return await operation()
+        except RetryableError as e:
+            last_exception = e
+            if attempt < max_retries - 1:
+                logger.warning(
+                    f"Attempt {attempt + 1}/{max_retries} failed: {e}. "
+                    f"Retrying in {delay:.1f}s"
+                )
+                await asyncio.sleep(delay)
+                delay = min(delay * backoff_factor, max_delay)
+            else:
+                logger.error(f"All {max_retries} attempts failed")
+        except NonRetryableError as e:
+            # Don't retry non-retryable errors
+            raise
+    
+    raise last_exception
+```
+
+### Circuit Breaker Pattern
+```python
+from enum import Enum
+from time import time
+
+class CircuitState(Enum):
+    CLOSED = "closed"  # Normal operation
+    OPEN = "open"      # Failing, reject requests
+    HALF_OPEN = "half_open"  # Testing if recovered
+
+class CircuitBreaker:
+    def __init__(
+        self,
+        failure_threshold: int = 5,
+        timeout: float = 60.0,
+        expected_exception: type = Exception
+    ):
+        self.failure_threshold = failure_threshold
+        self.timeout = timeout
+        self.expected_exception = expected_exception
+        self.failure_count = 0
+        self.last_failure_time = None
+        self.state = CircuitState.CLOSED
+    
+    async def call(self, operation: Callable) -> Any:
+        """Execute operation with circuit breaker protection."""
+        if self.state == CircuitState.OPEN:
+            if time() - self.last_failure_time > self.timeout:
+                self.state = CircuitState.HALF_OPEN
+            else:
+                raise CircuitBreakerOpenError("Circuit breaker is open")
+        
+        try:
+            result = await operation()
+            self._on_success()
+            return result
+        except self.expected_exception as e:
+            self._on_failure()
+            raise
+    
+    def _on_success(self) -> None:
+        """Handle successful operation."""
+        self.failure_count = 0
+        self.state = CircuitState.CLOSED
+    
+    def _on_failure(self) -> None:
+        """Handle failed operation."""
+        self.failure_count += 1
+        self.last_failure_time = time()
+        
+        if self.failure_count >= self.failure_threshold:
+            self.state = CircuitState.OPEN
+```
+
+## Fallback Strategies
+
+### Provider Fallback
+```python
+async def generate_with_fallback(
+    providers: list[Provider],
+    prompt: str
+) -> str:
+    """Generate with fallback to next provider on failure.
+    
+    Args:
+        providers: List of providers to try in order.
+        prompt: Prompt to generate.
+        
+    Returns:
+        Generated text from first successful provider.
+        
+    Raises:
+        ProviderError: If all providers fail.
+    """
+    last_error = None
+    
+    for provider in providers:
+        try:
+            result = await provider.generate(prompt)
+            if result:
+                logger.info(f"Successfully used {provider.name}")
+                return result
+        except ProviderError as e:
+            last_error = e
+            logger.warning(f"{provider.name} failed: {e}, trying next")
+            continue
+    
+    raise ProviderError(f"All providers failed. Last error: {last_error}") from last_error
+```
+
+### Default Value Fallback
+```python
+def get_config_with_default(key: str, default: Any) -> Any:
+    """Get config value with default fallback.
+    
+    Args:
+        key: Configuration key.
+        default: Default value if key not found.
+        
+    Returns:
+        Config value or default.
+    """
+    try:
+        value = config.get(key)
+        if value is None:
+            logger.info(f"Using default for {key}")
+            return default
+        return value
+    except ConfigurationError:
+        logger.warning(f"Config error for {key}, using default")
+        return default
+```
+
+## Graceful Degradation
+
+### Feature Flags
+```python
+class FeatureManager:
+    def __init__(self, config: ConfigManager):
+        self.config = config
+    
+    def is_enabled(self, feature: str) -> bool:
+        """Check if feature is enabled."""
+        try:
+            return self.config.get(f"features.{feature}", False)
+        except Exception:
+            # If config fails, disable feature
+            return False
+
+def advanced_feature():
+    """Feature that can be disabled."""
+    if not feature_manager.is_enabled("advanced_feature"):
+        logger.info("Advanced feature disabled, using basic mode")
+        return basic_feature()
+    
+    return advanced_implementation()
+```
+
+### Partial Functionality
+```python
+def process_with_optional_features(data: dict) -> Result:
+    """Process data with optional features that can fail.
+    
+    Args:
+        data: Input data.
+        
+    Returns:
+        Result with available features.
+    """
+    result = Result()
+    
+    # Core functionality (must work)
+    result.core = process_core(data)
+    
+    # Optional features (can fail gracefully)
+    try:
+        result.enhanced = process_enhanced(data)
+    except Exception as e:
+        logger.warning(f"Enhanced processing failed: {e}, using core only")
+        result.enhanced = None
+    
+    try:
+        result.analytics = process_analytics(data)
+    except Exception as e:
+        logger.warning(f"Analytics failed: {e}")
+        result.analytics = None
+    
+    return result
+```
+
+## Error Recovery Patterns
+
+### Timeout Handling
+```python
+import asyncio
+
+async def operation_with_timeout(
+    operation: Callable,
+    timeout: float = 30.0
+) -> Any:
+    """Execute operation with timeout.
+    
+    Args:
+        operation: Async operation to execute.
+        timeout: Timeout in seconds.
+        
+    Returns:
+        Operation result.
+        
+    Raises:
+        TimeoutError: If operation exceeds timeout.
+    """
+    try:
+        return await asyncio.wait_for(operation(), timeout=timeout)
+    except asyncio.TimeoutError:
+        logger.error(f"Operation timed out after {timeout}s")
+        raise TimeoutError(f"Operation exceeded {timeout}s timeout")
+```
+
+### Resource Cleanup
+```python
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def managed_resource():
+    """Context manager that ensures cleanup on error."""
+    resource = None
+    try:
+        resource = await acquire_resource()
+        yield resource
+    except Exception as e:
+        logger.error(f"Error in resource operation: {e}")
+        # Cleanup happens in finally
+        raise
+    finally:
+        if resource:
+            await release_resource(resource)
+```
+
+## Recovery Decision Tree
+
+```
+Error Occurs
+    │
+    ├─ Is it retryable?
+    │   ├─ Yes → Retry with backoff
+    │   └─ No → Check for fallback
+    │
+    ├─ Is there a fallback?
+    │   ├─ Yes → Use fallback
+    │   └─ No → Check for graceful degradation
+    │
+    ├─ Can we degrade gracefully?
+    │   ├─ Yes → Use reduced functionality
+    │   └─ No → Return clear error to user
+    │
+    └─ Log error and inform user
+```
+
+## Error Recovery Checklist
+
+- [ ] Retry logic implemented for transient errors
+- [ ] Exponential backoff used for retries
+- [ ] Circuit breaker for failing services
+- [ ] Fallback options available
+- [ ] Graceful degradation implemented
+- [ ] Timeouts set for all operations
+- [ ] Resource cleanup on errors
+- [ ] Clear error messages to users
+- [ ] Comprehensive error logging
+- [ ] Recovery strategies tested
+
+## Common Recovery Scenarios
+
+### Network Failures
+- Retry with exponential backoff
+- Use fallback providers
+- Cache results when possible
+- Inform user of connectivity issues
+
+### File System Errors
+- Retry transient errors
+- Use backup locations
+- Validate before operations
+- Provide clear error messages
+
+### Configuration Errors
+- Use default values
+- Validate on startup
+- Provide setup wizard
+- Clear error messages
+
+Remember: Systems will fail. Good error recovery makes failures manageable and transparent to users.
+

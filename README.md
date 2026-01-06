@@ -93,7 +93,7 @@ Filename: components/UserProfile.tsx
 **For Users:**
 ```bash
 # Install OmniDev
-pip install omnidev
+pip install git+https://github.com/codewithdark-git/OmniDev.git
 
 # Run interactive setup wizard
 omnidev -i
